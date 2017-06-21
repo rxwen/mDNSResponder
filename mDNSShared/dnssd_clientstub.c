@@ -76,14 +76,29 @@ static int gDaemonErr = kDNSServiceErr_NoError;
 
 #ifndef __ANDROID__
 	#include <sys/fcntl.h>		// For O_RDWR etc.
+    #include <syslog.h>
 #else
 	#include <fcntl.h>
 	#define LOG_TAG "libmdns"
+    #include <android/log.h>
 #endif  // !__ANDROID__
 	#include <sys/time.h>
 	#include <sys/socket.h>
-	#include <syslog.h>
-	
+#ifdef __ANDROID__
+    #include <stdarg.h>
+	#define LOG_WARNING 1
+	#define LOG_INFO 2
+	static void syslog( int priority, const char * message, ...)
+		{
+		va_list args;
+		char buffer[1024];
+		va_start( args, message );
+	    vsnprintf( buffer, sizeof buffer, message, args );
+        int level = priority == LOG_WARNING ? ANDROID_LOG_WARN : ANDROID_LOG_INFO;
+		__android_log_print(level, LOG_TAG, "%s", buffer);
+		}
+#endif
+
 	#define sockaddr_mdns sockaddr_un
 	#define AF_MDNS AF_LOCAL
 

@@ -185,27 +185,12 @@ int main(int argc, char **argv)
 
 	LogMsg("%s starting", mDNSResponderVersionString);
 
-	err = mDNS_Init(&mDNSStorage, &PlatformStorage, gRRCache, RR_CACHE_SIZE, mDNS_Init_AdvertiseLocalAddresses, 
-					mDNS_StatusCallback, mDNS_Init_NoInitCallbackContext); 
+	err = mDNS_Init(&mDNSStorage, &PlatformStorage, gRRCache, RR_CACHE_SIZE, mDNS_Init_AdvertiseLocalAddresses,
+					mDNS_StatusCallback, mDNS_Init_NoInitCallbackContext);
 
 	if (mStatus_NoError == err)
-#ifdef __ANDROID__
-		{
-		dnssd_sock_t s[1];
-		char *socketname = strrchr(MDNS_UDS_SERVERPATH, '/');
-		if (socketname)
-			{
-			socketname++; // skip '/'
-			s[0] = android_get_control_socket(socketname);
-			err = udsserver_init(s, 1);
-			} else {
-			err = udsserver_init(mDNSNULL, 0);
-			}
-		}
-#else
 		err = udsserver_init(mDNSNULL, 0);
-#endif // __ANDROID__
-		
+
 	Reconfigure(&mDNSStorage);
 
 	// Now that we're finished with anything privileged, switch over to running as "nobody"

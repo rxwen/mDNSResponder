@@ -207,6 +207,7 @@ mDNSexport void mDNSPlatformWriteLogMsg(const char *ident, const char *buffer, m
 			case MDNS_LOG_OPERATION: syslog_level = ANDROID_LOG_WARN;   break;
 			case MDNS_LOG_SPS:       syslog_level = ANDROID_LOG_DEBUG;  break;
 			case MDNS_LOG_INFO:      syslog_level = ANDROID_LOG_INFO;   break;
+			case MDNS_LOG_MSG:       syslog_level = ANDROID_LOG_INFO;   break;
 			default:                 syslog_level = ANDROID_LOG_ERROR;  break;
 #else
 			default:		return;

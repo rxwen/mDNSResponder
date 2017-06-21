@@ -14,7 +14,7 @@ commonFlags := \
     -DHAVE_IPV6 \
     -DNOT_HAVE_SA_LEN \
     -DPLATFORM_NO_RLIMIT \
-    -DMDNS_DEBUGMSGS=0 \
+    -DMDNS_DEBUGMSGS=1 \
     -DMDNS_UDS_SERVERPATH=\"/dev/socket/mdnsd\" \
     -DMDNS_USERNAME=\"mdnsr\" \
     -W \
