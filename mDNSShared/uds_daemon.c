@@ -39,6 +39,12 @@
 #include "cutils/sockets.h"
 #endif
 
+#if defined(USE_TCP_LOOPBACK)
+   #include <sys/socket.h>
+   #include <netinet/in.h>
+   #include <arpa/inet.h>
+#endif
+
 // Normally we append search domains only for queries with a single label that are not
 // fully qualified. This can be overridden to apply search domains for queries (that are
 // not fully qualified) with any number of labels e.g., moon, moon.cs, moon.cs.be, etc.

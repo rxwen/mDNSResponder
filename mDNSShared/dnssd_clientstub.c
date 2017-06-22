@@ -100,7 +100,14 @@ static int gDaemonErr = kDNSServiceErr_NoError;
 #endif
 
 	#define sockaddr_mdns sockaddr_un
+#if defined(USE_TCP_LOOPBACK)
+	#define AF_MDNS AF_INET
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+#else
 	#define AF_MDNS AF_LOCAL
+#endif
 
 #endif
 
