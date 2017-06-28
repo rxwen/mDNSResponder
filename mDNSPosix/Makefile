@@ -1,6 +1,6 @@
 # -*- tab-width: 4 -*-
 #
-# Copyright (c) 2002-2004, Apple Computer, Inc. All rights reserved.
+# Copyright (c) 2002-2004, 2015, Apple Computer, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without 
 # modification, are permitted provided that the following conditions are met:
@@ -30,8 +30,8 @@
 # If "make os=xxx" gives lots of errors like "Missing dependency operator",
 # then try typing "gmake os=xxx" instead.
 #
-# This Makefile builds an mDNSResponder daemon and a libdns_sd.so shared library 
-# for Linux. It also builds several example programs for embedded systems. 
+# This Makefile builds an mDNSResponder daemon and a libdns_sd.so shared library
+# for Linux. It also builds several example programs for embedded systems.
 #
 # Make with no arguments to build all production targets.
 # 'make DEBUG=1' to build debugging targets.
@@ -57,6 +57,7 @@ JDK = /usr/jdk
 CC = @cc
 BISON = @bison
 FLEX = @flex
+ST = @strip
 LD = ld -shared
 CP = cp
 RM = rm
@@ -71,18 +72,18 @@ JAVACFLAGS_OS = -fPIC -shared -ldns_sd
 # Set up diverging paths for debug vs. prod builds
 DEBUG=0
 ifeq ($(DEBUG),1)
-CFLAGS_DEBUG = -g -DMDNS_DEBUGMSGS=2 
+CFLAGS_DEBUG = -g -DMDNS_DEBUGMSGS=2
 OBJDIR = objects/debug
 BUILDDIR = build/debug
-STRIP = echo 
+STRIP = echo
 else
 # We use -Os for two reasons:
 # 1. We want to make small binaries, suitable for putting into hardware devices
 # 2. Some of the code analysis warnings only work when some form of optimization is enabled
-CFLAGS_DEBUG = -Os -DMDNS_DEBUGMSGS=0 
+CFLAGS_DEBUG = -Os -DMDNS_DEBUGMSGS=0
 OBJDIR ?= objects/prod
 BUILDDIR ?= build/prod
-STRIP = strip -S 
+STRIP = $(ST) -S
 endif
 
 # Configure per-OS peculiarities
@@ -95,14 +96,14 @@ LD = gcc -shared
 LINKOPTS = -lsocket -lnsl -lresolv
 JAVACFLAGS_OS += -I$(JDK)/include/solaris
 ifneq ($(DEBUG),1)
-STRIP = strip
+STRIP = $(ST)
 endif
 else
 
 # any target that contains the string "linux"
 ifeq ($(findstring linux,$(os)),linux)
 CFLAGS_OS = -D_GNU_SOURCE -DHAVE_IPV6 -DNOT_HAVE_SA_LEN -DUSES_NETLINK -DHAVE_LINUX -DTARGET_OS_LINUX -fno-strict-aliasing
-LD = gcc -shared
+LD = $(CC) -shared
 FLEXFLAGS_OS = -l
 JAVACFLAGS_OS += -I$(JDK)/include/linux
 
@@ -145,17 +146,19 @@ ifeq ($(os),x)
 # we get build failures: ‘daemon’ is deprecated (declared at /usr/include/stdlib.h:283)
 CFLAGS_OS = -DHAVE_IPV6 -no-cpp-precomp -Werror -Wdeclaration-after-statement \
 	-D__MAC_OS_X_VERSION_MIN_REQUIRED=__MAC_OS_X_VERSION_10_4 \
+	-DHAVE_STRLCPY=1 \
 	-D__APPLE_USE_RFC_2292 #-Wunreachable-code
 CC = gcc
 LD = $(CC) -dynamiclib
 LINKOPTS = -lSystem
 LDSUFFIX = dylib
 JDK = /System/Library/Frameworks/JavaVM.framework/Home
-JAVACFLAGS_OS = -dynamiclib -I/System/Library/Frameworks/JavaVM.framework/Headers -framework JavaVM 
+JAVACFLAGS_OS = -dynamiclib -I/System/Library/Frameworks/JavaVM.framework/Headers -framework JavaVM
+OPTIONALTARG = dnsextd
 else
 
 $(error ERROR: Must specify target OS on command-line, e.g. "make os=x [target]".\
-Supported operating systems include: x, linux, linux-uclibc, netbsd, freebsd, openbsd, solaris) 
+Supported operating systems include: x, linux, linux-uclibc, netbsd, freebsd, openbsd, solaris)
 endif
 endif
 endif
@@ -214,9 +217,9 @@ CFLAGS = $(CFLAGS_COMMON) $(CFLAGS_OS) $(CFLAGS_DEBUG)
 
 #############################################################################
 
-all: setup Daemon libdns_sd Clients SAClient SAResponder SAProxyResponder Identify NetMonitor dnsextd $(OPTIONALTARG)
+all: setup Daemon libdns_sd Clients SAClient SAResponder SAProxyResponder Identify NetMonitor $(OPTIONALTARG)
 
-install: setup InstalledDaemon InstalledStartup InstalledLib InstalledManPages InstalledClients $(OPTINSTALL)
+install: setup InstalledStartup InstalledDaemon InstalledLib InstalledManPages InstalledClients $(OPTINSTALL)
 
 # 'setup' sets up the build directory structure the way we want
 setup:
@@ -234,11 +237,13 @@ clean:
 # daemon target builds the daemon
 DAEMONOBJS = $(OBJDIR)/PosixDaemon.c.o $(OBJDIR)/mDNSPosix.c.o $(OBJDIR)/mDNSUNP.c.o $(OBJDIR)/mDNS.c.o \
              $(OBJDIR)/DNSDigest.c.o $(OBJDIR)/uDNS.c.o $(OBJDIR)/DNSCommon.c.o $(OBJDIR)/uds_daemon.c.o \
-             $(OBJDIR)/mDNSDebug.c.o $(OBJDIR)/dnssd_ipc.c.o $(OBJDIR)/GenLinkedList.c.o $(OBJDIR)/PlatformCommon.c.o 
+             $(OBJDIR)/mDNSDebug.c.o $(OBJDIR)/dnssd_ipc.c.o $(OBJDIR)/GenLinkedList.c.o $(OBJDIR)/PlatformCommon.c.o \
+			 $(OBJDIR)/CryptoAlg.c.o $(OBJDIR)/anonymous.c.o
 
 # dnsextd target build dnsextd
 DNSEXTDOBJ = $(OBJDIR)/mDNSPosix.c.o $(OBJDIR)/mDNSUNP.c.o $(OBJDIR)/mDNSDebug.c.o $(OBJDIR)/GenLinkedList.c.o $(OBJDIR)/DNSDigest.c.o \
-             $(OBJDIR)/DNSCommon.c.o $(OBJDIR)/PlatformCommon.c.o $(OBJDIR)/dnsextd_parser.y.o $(OBJDIR)/dnsextd_lexer.l.o
+             $(OBJDIR)/DNSCommon.c.o $(OBJDIR)/PlatformCommon.c.o $(OBJDIR)/dnsextd_parser.y.o $(OBJDIR)/dnsextd_lexer.l.o \
+			 $(OBJDIR)/CryptoAlg.c.o
 
 Daemon: setup $(BUILDDIR)/mdnsd
 	@echo "Responder daemon done"
@@ -293,9 +298,10 @@ InstalledNSS: $(NSSINSTPATH)/$(NSSLINKNAME) /etc/nss_mdns.conf $(MANPATH)/man5/n
 	@echo $+ " installed"
 
 # Note: If daemon already installed, we make sure it's stopped before overwriting it
-$(INSTBASE)/sbin/mdnsd: $(BUILDDIR)/mdnsd
+$(INSTBASE)/sbin/mdnsd: $(BUILDDIR)/mdnsd $(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME)
 	@if test -x $@; then $(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME) stop; fi
 	$(CP) $< $@
+	@$(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME) start
 
 $(INSTBASE)/lib/libdns_sd.$(LDSUFFIX).$(LIBVERS): $(BUILDDIR)/libdns_sd.$(LDSUFFIX)
 	$(CP) $< $@
@@ -308,12 +314,9 @@ endif
 $(INSTBASE)/include/dns_sd.h: $(SHAREDDIR)/dns_sd.h
 	$(CP) $< $@
 
-# We make this target dependent on $(INSTBASE)/sbin/mdnsd because we need to ensure
-# that the daemon is installed *before* we try to execute the command to start it.
-$(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME): mdnsd.sh $(STARTUPSCRIPTDIR) $(INSTBASE)/sbin/mdnsd
+$(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME): mdnsd.sh $(STARTUPSCRIPTDIR)
 	$(CP) $< $@
 	chmod ugo+x $@
-	$@ start
 ifdef RUNLEVELSCRIPTSDIR
 ifeq ($(wildcard $(RUNLEVELSCRIPTSDIR)/runlevels/default), $(RUNLEVELSCRIPTSDIR)/runlevels/default)
 	$(LN) $@ $(RUNLEVELSCRIPTSDIR)/runlevels/default/mdns
@@ -443,7 +446,8 @@ JavaDoc: Java setup
 
 # The following targets build embedded example programs
 SPECIALOBJ = $(OBJDIR)/mDNSPosix.c.o $(OBJDIR)/mDNSUNP.c.o $(OBJDIR)/mDNSDebug.c.o $(OBJDIR)/GenLinkedList.c.o \
-	$(OBJDIR)/DNSDigest.c.o $(OBJDIR)/uDNS.c.o $(OBJDIR)/DNSCommon.c.o $(OBJDIR)/PlatformCommon.c.o
+	$(OBJDIR)/DNSDigest.c.o $(OBJDIR)/uDNS.c.o $(OBJDIR)/DNSCommon.c.o $(OBJDIR)/PlatformCommon.c.o \
+	$(OBJDIR)/CryptoAlg.c.o $(OBJDIR)/anonymous.c.o
 COMMONOBJ  = $(SPECIALOBJ) $(OBJDIR)/mDNS.c.o
 APPOBJ     = $(COMMONOBJ) $(OBJDIR)/ExampleClientApp.c.o
 
