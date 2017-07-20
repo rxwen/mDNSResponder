@@ -15,7 +15,7 @@ commonFlags := \
     -DNOT_HAVE_SA_LEN \
     -DPLATFORM_NO_RLIMIT \
 	-DUSE_TCP_LOOPBACK \
-    -DMDNS_DEBUGMSGS=1 \
+    -DMDNS_DEBUGMSGS=0 \
     -DMDNS_UDS_SERVERPATH=\"/dev/socket/mdnsd\" \
     -DMDNS_USERNAME=\"root\" \
     -W \
