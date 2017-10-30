@@ -12,6 +12,7 @@ commonFlags := \
     -fno-strict-aliasing \
     -D_GNU_SOURCE \
     -DHAVE_IPV6 \
+    -D__ANDROID__ \
     -DNOT_HAVE_SA_LEN \
     -DPLATFORM_NO_RLIMIT \
 	-DUSE_TCP_LOOPBACK \
