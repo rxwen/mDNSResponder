@@ -145,7 +145,7 @@ include $(BUILD_EXECUTABLE)
 ### STATIC LIB ###
 include $(CLEAR_VARS)
 
-LOCAL_SDK_VERSION := 8
+LOCAL_SDK_VERSION := 9
 LOCAL_MODULE    := libmdns_jni_static
 LOCAL_SRC_FILES :=  /mDNSCore/mDNS.c \
                     /mDNSCore/DNSDigest.c \
