@@ -16,6 +16,7 @@
  *
  */
 
+#include <sys/select.h>
 #include "mDNSEmbeddedAPI.h"           // Defines the interface provided to the client layer above
 #include "DNSCommon.h"
 #include "mDNSPosix.h"               // Defines the specific types needed to run mDNS on this platform

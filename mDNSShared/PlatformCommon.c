@@ -28,7 +28,7 @@
 #endif 
 
 #include "mDNSEmbeddedAPI.h"    // Defines the interface provided to the client layer above
-#include "DNSCommon.h"
+/*#include "DNSCommon.h"*/
 #include "PlatformCommon.h"
 
 #ifdef NOT_HAVE_SOCKLEN_T
