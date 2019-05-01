@@ -82,6 +82,7 @@ static void syslog( int priority, const char * message, ...)
 
  #ifndef __ANDROID__
     #include <sys/fcntl.h>      // For O_RDWR etc.
+    #include <syslog.h>
  #else
  	#include <fcntl.h>
  	#define LOG_TAG "libmdns"
@@ -89,7 +90,6 @@ static void syslog( int priority, const char * message, ...)
  #endif  // !__ANDROID__
     #include <sys/time.h>
     #include <sys/socket.h>
-    #include <syslog.h>
 
 #ifdef __ANDROID__
     #include <stdarg.h>
