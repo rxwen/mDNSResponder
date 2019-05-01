@@ -33,6 +33,8 @@ daemonSources := mDNSCore/mDNS.c            \
                  mDNSCore/DNSDigest.c       \
                  mDNSCore/uDNS.c            \
                  mDNSCore/DNSCommon.c       \
+                 mDNSCore/anonymous.c       \
+                 mDNSCore/CryptoAlg.c		\
                  mDNSShared/uds_daemon.c    \
                  mDNSShared/mDNSDebug.c     \
                  mDNSShared/dnssd_ipc.c     \
@@ -142,41 +144,3 @@ include $(BUILD_EXECUTABLE)
 
 ############################
 # This builds an mDns that is embeddable within GmsCore for the nearby connections API
-
-### STATIC LIB ###
-include $(CLEAR_VARS)
-
-LOCAL_SDK_VERSION := 9
-LOCAL_MODULE    := libmdns_jni_static
-LOCAL_SRC_FILES :=  /mDNSCore/mDNS.c \
-                    /mDNSCore/DNSDigest.c \
-                    /mDNSCore/uDNS.c \
-                    /mDNSCore/DNSCommon.c \
-                    /mDNSPosix/mDNSPosix.c \
-                    /mDNSPosix/mDNSUNP.c \
-                    /mDNSShared/mDNSDebug.c \
-                    /mDNSShared/dnssd_clientlib.c \
-                    /mDNSShared/dnssd_clientshim.c \
-                    /mDNSShared/dnssd_ipc.c \
-                    /mDNSShared/GenLinkedList.c \
-                    /mDNSShared/PlatformCommon.c
-
-LOCAL_C_INCLUDES := external/mdnsresponder/mDNSPosix \
-                    external/mdnsresponder/mDNSCore  \
-                    external/mdnsresponder/mDNSShared
-
-LOCAL_CFLAGS += -Os -fvisibility=hidden
-LOCAL_CFLAGS += $(commonFlags) \
-                -UMDNS_DEBUGMSGS \
-                -DMDNS_DEBUGMSGS=0 \
-                -DSO_REUSEADDR \
-                -DUNICAST_DISABLED \
-                -DTARGET_OS_LINUX \
-                -DHAVE_LINUX \
-                -DUSES_NETLINK
-
-ifeq ($(TARGET_BUILD_TYPE),debug)
-  LOCAL_CFLAGS += -O0 -UNDEBUG -fno-omit-frame-pointer
-endif
-
-include $(BUILD_STATIC_LIBRARY)
