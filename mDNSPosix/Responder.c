@@ -439,7 +439,7 @@ static mStatus RegisterOneService(const char *  richTextName,
         status = mDNS_RegisterService(&mDNSStorage, &thisServ->coreServ,
                                       &name, &type, &domain, // Name, type, domain
                                       NULL, mDNSOpaque16fromIntVal(portNumber),
-                                      text, textLen, // TXT data, length
+                                      NULL, text, textLen, // TXT data, length
                                       NULL, 0,      // Subtypes
                                       mDNSInterface_Any, // Interface ID
                                       RegistrationCallback, thisServ, 0); // Callback, context, flags
@@ -723,7 +723,7 @@ int main(int argc, char **argv)
         // 2. Set up the timeout.
         // This example client has no other work it needs to be doing,
         // so we set an effectively infinite timeout
-        timeout.tv_sec = 0x3FFFFFFF;
+        timeout.tv_sec = FutureTime;
         timeout.tv_usec = 0;
 
         // 3. Give the mDNSPosix layer a chance to add its information to the fd_set and timeout

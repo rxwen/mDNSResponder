@@ -28,12 +28,8 @@
 #endif 
 
 #include "mDNSEmbeddedAPI.h"    // Defines the interface provided to the client layer above
-/*#include "DNSCommon.h"*/
+#include "DNSCommon.h"
 #include "PlatformCommon.h"
-
-#ifdef __ANDROID__
-#include <android/log.h>
-#endif
 
 #ifdef NOT_HAVE_SOCKLEN_T
 typedef unsigned int socklen_t;
@@ -151,12 +147,8 @@ badf:
 #if MDNS_DEBUGMSGS
 mDNSexport void mDNSPlatformWriteDebugMsg(const char *msg)
 {
-#ifdef __ANDROID__
-	__android_log_print(ANDROID_LOG_DEBUG, "mdns", "%s", msg);
-#else
     fprintf(stderr,"%s\n", msg);
     fflush(stderr);
-#endif
 }
 #endif
 
@@ -171,9 +163,6 @@ mDNSexport void mDNSPlatformWriteLogMsg(const char *ident, const char *buffer, m
 
     if (mDNS_DebugMode) // In debug mode we write to stderr
     {
-#ifdef __ANDROID__
-        __android_log_print(ANDROID_LOG_INFO, "mdns", "%s", buffer);
-#endif
 #if APPLE_OSX_mDNSResponder && LogTimeStamps
         if (ident && ident[0] && mDNSPlatformClockDivisor)
             fprintf(stderr,"%8d.%03d: %s\n", (int)(t/1000), ms, buffer);
@@ -197,14 +186,6 @@ mDNSexport void mDNSPlatformWriteLogMsg(const char *ident, const char *buffer, m
         case MDNS_LOG_DEBUG:     syslog_level = OS_LOG_TYPE_DEBUG;       break;
         default:                 syslog_level = OS_LOG_TYPE_DEFAULT;     break;
 #else
-#ifdef __ANDROID__
-			case MDNS_LOG_DEBUG:     syslog_level = ANDROID_LOG_DEBUG;  break;
-			case MDNS_LOG_OPERATION: syslog_level = ANDROID_LOG_WARN;   break;
-			case MDNS_LOG_SPS:       syslog_level = ANDROID_LOG_DEBUG;  break;
-			case MDNS_LOG_INFO:      syslog_level = ANDROID_LOG_INFO;   break;
-			case MDNS_LOG_MSG:       syslog_level = ANDROID_LOG_INFO;   break;
-			default:                 syslog_level = ANDROID_LOG_ERROR;  break;
-#else
         case MDNS_LOG_MSG:       syslog_level = LOG_ERR;     break;
         case MDNS_LOG_OPERATION: syslog_level = LOG_WARNING; break;
         case MDNS_LOG_SPS:       syslog_level = LOG_NOTICE;  break;
@@ -213,7 +194,6 @@ mDNSexport void mDNSPlatformWriteLogMsg(const char *ident, const char *buffer, m
         default:
             fprintf(stderr, "Unknown loglevel %d, assuming LOG_ERR\n", loglevel);
             fflush(stderr);
-#endif
 #endif
         }
 
@@ -228,11 +208,7 @@ mDNSexport void mDNSPlatformWriteLogMsg(const char *ident, const char *buffer, m
 #if APPLE_OSX_mDNSResponder
             mDNSPlatformLogToFile(syslog_level, buffer);
 #else
-#ifdef __ANDROID__
-            __android_log_print(syslog_level, "mdns", "%s", buffer);
-#else
             syslog(syslog_level, "%s", buffer);
-#endif
 #endif
         }
     }
