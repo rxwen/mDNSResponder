@@ -253,5 +253,5 @@ mDNSexport const char mDNSResponderVersionString_SCCS[] = "@(#) mDNSResponder-" 
 #elif MDNS_VERSIONSTR_NODTS
 mDNSexport const char mDNSResponderVersionString_SCCS[] = "@(#) mDNSResponder (Engineering Build)";
 #else
-mDNSexport const char mDNSResponderVersionString_SCCS[] = "@(#) mDNSResponder (Engineering Build) (" __DATE__ " " __TIME__ ")";
+mDNSexport const char mDNSResponderVersionString_SCCS[] = "@(#) mDNSResponder (878.200.35) (" __DATE__ " " __TIME__ ")";
 #endif

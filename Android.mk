@@ -60,7 +60,6 @@ LOCAL_C_INCLUDES := $(daemonIncludes)
 LOCAL_CFLAGS := \
   $(commonFlags) \
   -DTARGET_OS_LINUX \
-  -DMDNS_VERSIONSTR_NODTS=1 \
   -DHAVE_LINUX \
   -DUSES_NETLINK \
 
