@@ -107,15 +107,20 @@ mDNSlocal void ParseCmdLinArgs(int argc, char **argv)
         else printf("Usage: %s [-debug]\n", argv[0]);
     }
 
+#ifdef __ANDROID__
+    LogMsg("disable daemon mode in android %s:%d", __func__, __LINE__);
+#else
     if (!mDNS_DebugMode)
     {
         int result = daemon(0, 0);
+        LogMsg("change to daemon mode:  %s:%d", __func__, __LINE__);
         if (result != 0) { LogMsg("Could not run as daemon - exiting"); exit(result); }
 #if __APPLE__
         LogMsg("The POSIX mdnsd should only be used on OS X for testing - exiting");
         exit(-1);
 #endif
     }
+#endif
 }
 
 mDNSlocal void DumpStateLog()
@@ -185,14 +190,14 @@ int main(int argc, char **argv)
     Reconfigure(&mDNSStorage);
 
     // Now that we're finished with anything privileged, switch over to running as "nobody"
-    if (mStatus_NoError == err)
-    {
-        const struct passwd *pw = getpwnam("nobody");
-        if (pw != NULL)
-            setuid(pw->pw_uid);
-        else
-            LogMsg("WARNING: mdnsd continuing as root because user \"nobody\" does not exist");
-    }
+    /*if (mStatus_NoError == err)*/
+    /*{*/
+        /*const struct passwd *pw = getpwnam("nobody");*/
+        /*if (pw != NULL)*/
+            /*setuid(pw->pw_uid);*/
+        /*else*/
+            /*LogMsg("WARNING: mdnsd continuing as root because user \"nobody\" does not exist");*/
+    /*}*/
 
     if (mStatus_NoError == err)
         err = MainLoop(&mDNSStorage);
