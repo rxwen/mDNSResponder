@@ -21,8 +21,10 @@
 #include <errno.h>              // Needed for errno etc.
 #include <sys/socket.h>         // Needed for socket() etc.
 #include <netinet/in.h>         // Needed for sockaddr_in
+#ifdef __ANDROID__
+#else
 #include <syslog.h>
-
+#endif
 #if APPLE_OSX_mDNSResponder
 #include <os/log.h>
 #endif 
@@ -152,8 +154,16 @@ mDNSexport void mDNSPlatformWriteDebugMsg(const char *msg)
 }
 #endif
 
+#ifdef __ANDROID__
+#define LOG_TAG "mdnsd"
+#include <utils/Log.h>
+#endif
+
 mDNSexport void mDNSPlatformWriteLogMsg(const char *ident, const char *buffer, mDNSLogLevel_t loglevel)
 {
+#ifdef __ANDROID__
+    LOGI("%s\n", buffer);
+#else
 #if APPLE_OSX_mDNSResponder && LogTimeStamps
     extern mDNS mDNSStorage;
     extern mDNSu32 mDNSPlatformClockDivisor;
@@ -212,4 +222,5 @@ mDNSexport void mDNSPlatformWriteLogMsg(const char *ident, const char *buffer, m
 #endif
         }
     }
+#endif
 }
