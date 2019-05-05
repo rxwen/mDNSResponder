@@ -216,7 +216,8 @@ done:
         assert(rv == 0);
     }
     if (fp != NULL) {
-        fclose(fp);
+		int fd_closed = fclose(fp);
+		assert(fd_closed == 0);
     }
     return(ifihead);    /* pointer to first structure in linked list */
 }
