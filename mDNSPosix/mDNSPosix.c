@@ -486,7 +486,7 @@ mDNSlocal void GetUserSpecifiedRFC1034ComputerName(domainlabel *const namelabel)
 	gethostname((char *)(&namelabel->c[1]), MAX_DOMAIN_LABEL);
 #else
 	// use an appropriate default label rather than the linux default of 'localhost'
-	strncpy(&namelabel->c[1], "Android", MAX_DOMAIN_LABEL);
+	strncpy(&namelabel->c[1], "TerncyHC", MAX_DOMAIN_LABEL);
 #endif
 	while (len < MAX_DOMAIN_LABEL && namelabel->c[len+1] && namelabel->c[len+1] != '.') len++;
 	namelabel->c[0] = len;
