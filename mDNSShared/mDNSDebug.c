@@ -65,7 +65,7 @@ mDNSlocal void LogMsgWithLevelv(mDNSLogLevel_t logLevel, const char *format, va_
 	{
 	char buffer[512];
 	buffer[mDNS_vsnprintf((char *)buffer, sizeof(buffer), format, ptr)] = 0;
-	mDNSPlatformWriteLogMsg(ProgramName, buffer, logLevel);
+	mDNSPlatformWriteLogMsg("mDNSClientPosix", buffer, logLevel);
 	}
 
 #define LOG_HELPER_BODY(L) \
