@@ -2507,6 +2507,29 @@ mDNSlocal void AutomaticBrowseDomainChange(mDNS *const m, DNSQuestion *q, const 
     else RmvAutoBrowseDomain(0, &answer->rdata->u.name);
 }
 
+mDNSlocal mStatus handle_sethost_request(request_state *request)
+{
+	get_flags(&request->msgptr, request->msgend);
+	char hostName[MAX_DOMAIN_LABEL];
+	int len = 0;
+	if (get_string(&request->msgptr, request->msgend, hostName,
+		MAX_DOMAIN_LABEL) < 0) return (mStatus_BadParamErr);
+	LogOperation("%3d: DNSSetHostname(%X, %d, nonstr ) START",
+		request->sd, request->flags);
+	// if we start using this as a callback for notification when the
+	// hostname changes we may need to cleanup from it
+	//  request->terminate = sethost_termination_callback;
+	if(hostName[0] == 0) return mStatus_BadParamErr;
+		while (len < MAX_DOMAIN_LABEL && hostName[len+1]
+			&& hostName[len+1] != '.') len++;
+	strncpy(&(mDNSStorage.nicelabel.c[1]), hostName, len);
+	mDNSStorage.nicelabel.c[0] = len;
+	strncpy(&(mDNSStorage.hostlabel.c[1]), hostName, len);
+	mDNSStorage.hostlabel.c[0] = len;
+	mDNS_SetFQDN(&mDNSStorage);
+	return mStatus_NoError;
+}
+
 mDNSlocal mStatus handle_browse_request(request_state *request)
 {
     // Note that regtype may include a trailing subtype
