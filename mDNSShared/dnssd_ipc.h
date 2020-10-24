@@ -138,6 +138,7 @@ typedef enum
     getpid_request,
     release_request,
     connection_delegate_request,
+    sethost_request,
 
     cancel_request = 63
 } request_op_t;

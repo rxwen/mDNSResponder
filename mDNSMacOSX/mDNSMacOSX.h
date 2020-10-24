@@ -154,6 +154,7 @@ struct NetworkInterfaceInfoOSX_struct
     u_int BPF_len;
     mDNSBool isExpensive;                       // True if this interface has the IFEF_EXPENSIVE flag set.
     mDNSBool isAWDL;                            // True if this interface has the IFEF_AWDL flag set.
+    mDNSBool isCLAT46;                          // True if this interface has the IFEF_CLAT46 flag set.
 #ifdef MDNSRESPONDER_USES_LIB_DISPATCH_AS_PRIMARY_EVENT_LOOP_MECHANISM
     dispatch_source_t BPF_source;
 #else
@@ -243,8 +244,6 @@ extern int KQueueSet(int fd, u_short flags, short filter, const KQueueEntry *con
 extern void KQueueLock(void);
 extern void KQueueUnlock(const char* task);
 extern void mDNSPlatformCloseFD(KQueueEntry *kq, int fd);
-extern ssize_t myrecvfrom(const int s, void *const buffer, const size_t max,
-                             struct sockaddr *const from, size_t *const fromlen, mDNSAddr *dstaddr, char *ifname, mDNSu8 *ttl);
 
 extern mDNSBool DictionaryIsEnabled(CFDictionaryRef dict);
 

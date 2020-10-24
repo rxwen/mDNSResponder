@@ -66,7 +66,7 @@
  */
 
 #ifndef _DNS_SD_H
-#define _DNS_SD_H 8800035
+#define _DNS_SD_H 8806001
 
 #ifdef  __cplusplus
 extern "C" {
@@ -2235,6 +2235,24 @@ DNSServiceErrorType DNSSD_API DNSServiceNATPortMappingCreate
     DNSServiceNATPortMappingReply callBack,
     void                             *context           /* may be NULL             */
 );
+
+typedef void (DNSSD_API *DNSHostnameChangedReply)
+    (
+    DNSServiceRef                    sdRef,
+    DNSServiceFlags                  flags,
+    DNSServiceErrorType              errorCode,
+    const char                       *hostname,
+    void                             *context
+    );
+
+DNSServiceErrorType DNSSD_API DNSSetHostname
+    (
+    DNSServiceRef                    *sdRef,
+    DNSServiceFlags                  flags,
+    const char                       *hostname,
+    DNSHostnameChangedReply          callBack,
+    void                             *context
+    );
 
 typedef void (DNSSD_API *DNSHostnameChangedReply)
     (

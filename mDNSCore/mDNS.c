@@ -6092,7 +6092,7 @@ mDNSexport mStatus UpdateKeepaliveRData(mDNS *const m, AuthRecord *rr, NetworkIn
         }
         if ((intf != mDNSNULL) && (mti.IntfId != intf->InterfaceID))
         {
-            LogInfo("mDNSPlatformRetrieveTCPInfo: InterfaceID  mismatch mti.IntfId = %p InterfaceID = %p",  mti.IntfId, intf->InterfaceID);
+            LogInfo("mDNSPlatformRetrieveTCPInfo: InterfaceID mismatch mti.IntfId = %p InterfaceID = %p",  mti.IntfId, intf->InterfaceID);
             return mStatus_BadParamErr;
         }
 
@@ -6661,6 +6661,7 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
         NetworkInterfaceInfo *intf;
         for (intf = GetFirstActiveInterface(m->HostInterfaces); intf; intf = GetFirstActiveInterface(intf->next))
         {
+            mDNSBool skipFullSleepProxyRegistration = mDNSfalse;
             // Intialize it to false. These values make sense only when SleepState is set to Sleeping.
             intf->SendGoodbyes = 0;
 
@@ -6687,18 +6688,21 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
                 continue;
             }
 
-            // Check if we have already registered with a sleep proxy for this subnet
+            // Check if we have already registered with a sleep proxy for this subnet.
+            // If so, then the subsequent in-NIC sleep proxy registration is limited to any keepalive records that belong
+            // to the interface.
             if (skipSameSubnetRegistration(m, registeredIntfIDS, registeredCount, intf->InterfaceID))
             {
-                LogSPS("%s : Skipping sleep proxy registration on %s", __func__, intf->ifname);
-                continue;
+                LogSPS("%s : Skipping full sleep proxy registration on %s", __func__, intf->ifname);
+                skipFullSleepProxyRegistration = mDNStrue;
             }
 
 #if APPLE_OSX_mDNSResponder
-            else if (SupportsInNICProxy(intf))
+            if (SupportsInNICProxy(intf))
             {
                 mDNSBool keepaliveOnly = mDNSfalse;
-                if (ActivateLocalProxy(intf, &keepaliveOnly) == mStatus_NoError)
+                const mStatus err = ActivateLocalProxy(intf, skipFullSleepProxyRegistration, &keepaliveOnly);
+                if (!skipFullSleepProxyRegistration && !err)
                 {
                     SendGoodbyesForWakeOnlyService(m, &WakeOnlyService);
 
@@ -6716,9 +6720,10 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
                     registeredIntfIDS[registeredCount] = intf->InterfaceID;
                     registeredCount++;
                 }
+                continue;
             }
 #endif // APPLE_OSX_mDNSResponder
-            else
+            if (!skipFullSleepProxyRegistration)
             {
 #if APPLE_OSX_mDNSResponder
                 // If on battery, do not attempt to offload to external sleep proxies
@@ -7171,7 +7176,7 @@ mDNSlocal mDNSu8 *GenerateUnicastResponse(const DNSMessage *const query, const m
     const mDNSu8    *const limit     = response->data + sizeof(response->data);
     const mDNSu8    *ptr             = query->data;
     AuthRecord  *rr;
-    mDNSu32 maxttl = 0x70000000;
+    mDNSu32 maxttl = mDNSMaximumTTLSeconds;
     int i;
 
     // Initialize the response fields so we can answer the questions
@@ -8075,19 +8080,25 @@ struct UDPSocket_struct
     mDNSIPPort port; // MUST BE FIRST FIELD -- mDNSCoreReceive expects every UDPSocket_struct to begin with mDNSIPPort port
 };
 
-mDNSlocal DNSQuestion *ExpectingUnicastResponseForQuestion(const mDNS *const m, const mDNSIPPort port, const mDNSOpaque16 id, const DNSQuestion *const question, mDNSBool tcp)
+mDNSlocal DNSQuestion *ExpectingUnicastResponseForQuestion(const mDNS *const m, const mDNSIPPort port, const mDNSOpaque16 id, const DNSQuestion *const question, mDNSBool tcp, DNSQuestion ** suspiciousQ)
 {
     DNSQuestion *q;
     for (q = m->Questions; q; q=q->next)
     {
         if (!tcp && !q->LocalSocket) continue;
-        if (mDNSSameIPPort(tcp ? q->tcpSrcPort : q->LocalSocket->port, port)     &&
-            mDNSSameOpaque16(q->TargetQID,         id)       &&
+        if (mDNSSameIPPort(tcp ? q->tcpSrcPort : q->LocalSocket->port, port)       &&
             q->qtype                  == question->qtype     &&
             q->qclass                 == question->qclass    &&
             q->qnamehash              == question->qnamehash &&
             SameDomainName(&q->qname, &question->qname))
-            return(q);
+        {
+            if (mDNSSameOpaque16(q->TargetQID, id)) return(q);
+            else
+            {
+                if (!tcp && suspiciousQ) *suspiciousQ = q;
+                return(mDNSNULL);
+            }
+        }
     }
     return(mDNSNULL);
 }
@@ -8413,7 +8424,7 @@ mDNSlocal void mDNSCoreReceiveNoDNSSECAnswers(mDNS *const m, const DNSMessage *c
         DNSQuestion pktq;
         DNSQuestion *qptr = mDNSNULL;
         ptr = getQuestion(response, ptr, end, InterfaceID, &pktq);
-        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &pktq, !dstaddr)) &&
+        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &pktq, !dstaddr, mDNSNULL)) &&
             qptr->ValidatingResponse)
         {
             DNSQuestion *next, *q;
@@ -8457,7 +8468,7 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
         DNSQuestion q;
         DNSQuestion *qptr = mDNSNULL;
         ptr = getQuestion(response, ptr, end, InterfaceID, &q);
-        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr)))
+        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr, mDNSNULL)))
         {
             CacheRecord *rr, *neg = mDNSNULL;
             CacheGroup *cg = CacheGroupForName(m, q.qnamehash, &q.qname);
@@ -9037,9 +9048,9 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
         // packet number, then we deduce they are old and delete them
         for (i = 0; i < response->h.numQuestions && ptr && ptr < end; i++)
         {
-            DNSQuestion q, *qptr = mDNSNULL;
+            DNSQuestion q, *qptr = mDNSNULL, *suspiciousForQ = mDNSNULL;
             ptr = getQuestion(response, ptr, end, InterfaceID, &q);
-            if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr)))
+            if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr, &suspiciousForQ)))
             {
                 if (!failure)
                 {
@@ -9101,6 +9112,15 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                     }
                     returnEarly = mDNStrue;
                 }
+            }
+            else if (!InterfaceID && suspiciousForQ)
+            {
+                // If a response is suspicious for a question, then reissue the question via TCP
+                LogInfo("mDNSCoreReceiveResponse: Server %p responded suspiciously to query %##s (%s) qID %d != rID: %d",
+                        suspiciousForQ->qDNSServer, q.qname.c, DNSTypeName(q.qtype),
+                        mDNSVal16(suspiciousForQ->TargetQID), mDNSVal16(response->h.id));
+                uDNS_RestartQuestionAsTCP(m, suspiciousForQ, srcaddr, srcport);
+                return;
             }
         }
         if (returnEarly)
@@ -9236,6 +9256,7 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                     {
                         debugf("mDNSCoreReceiveResponse: InterfaceID %p %##s (%s)", q->InterfaceID, q->qname.c, DNSTypeName(q->qtype));
                         m->rec.r.resrec.rDNSServer = uDNSServer = q->qDNSServer;
+                        if (!unicastQuestion) unicastQuestion = q;      //  Acceptable responses to unicast questions need to have (unicastQuestion != nil)
                     }
                     else
                     {
@@ -11302,6 +11323,8 @@ mDNSlocal mDNSBool IsPrivateDomain(mDNS *const m, DNSQuestion *q)
     }
 }
 
+#define TrueFalseStr(X) ((X) ? "true" : "false")
+
 // This function takes the DNSServer as a separate argument because sometimes the
 // caller has not yet assigned the DNSServer, but wants to evaluate the SuppressQuery
 // status before switching to it.
@@ -11328,13 +11351,20 @@ mDNSlocal mDNSBool ShouldSuppressUnicastQuery(mDNS *const m, DNSQuestion *q, DNS
     }
 
     // Check if the DNS Configuration allows A/AAAA queries to be sent
-    if ((q->qtype == kDNSType_A) && (d->req_A))
+    if ((q->qtype == kDNSType_A) && d->req_A)
     {
-        LogDebug("ShouldSuppressUnicastQuery: Query not suppressed for %##s, qtype %s, DNSServer %##s %#a:%d allows A queries", q->qname.c,
-                DNSTypeName(q->qtype), d->domain.c, &d->addr, mDNSVal16(d->port));
-        return mDNSfalse;
+        // The server's configuration allows A record queries, so don't suppress this query unless
+        //     1. the interface associated with the server is CLAT46; and
+        //     2. the query has the kDNSServiceFlagsPathEvaluationDone flag, which indicates that it came from libnetcore.
+        // See <rdar://problem/42672030> for more info.
+        if (!(d->isCLAT46 && (q->flags & kDNSServiceFlagsPathEvaluationDone)))
+        {
+            LogDebug("ShouldSuppressUnicastQuery: Query not suppressed for %##s, qtype %s, DNSServer %##s %#a:%d allows A queries", q->qname.c,
+                     DNSTypeName(q->qtype), d->domain.c, &d->addr, mDNSVal16(d->port));
+            return mDNSfalse;
+        }
     }
-    if ((q->qtype == kDNSType_AAAA) && (d->req_AAAA))
+    if ((q->qtype == kDNSType_AAAA) && d->req_AAAA)
     {
         LogDebug("ShouldSuppressUnicastQuery: Query not suppressed for %##s, qtype %s, DNSServer %##s %#a:%d allows AAAA queries", q->qname.c,
                 DNSTypeName(q->qtype), d->domain.c, &d->addr, mDNSVal16(d->port));
@@ -11348,8 +11378,8 @@ mDNSlocal mDNSBool ShouldSuppressUnicastQuery(mDNS *const m, DNSQuestion *q, DNS
     }
 #endif
 
-    LogInfo("ShouldSuppressUnicastQuery: Query suppressed for %##s, qtype %s, since DNS Configuration does not allow (req_A is %s and req_AAAA is %s)",
-        q->qname.c, DNSTypeName(q->qtype), d->req_A ? "true" : "false", d->req_AAAA ? "true" : "false");
+    LogInfo("ShouldSuppressUnicastQuery: Query suppressed for %##s, qtype %s, since DNS Configuration does not allow (req_A %s, req_AAAA %s, CLAT46 %s)",
+        q->qname.c, DNSTypeName(q->qtype), TrueFalseStr(d->req_A), TrueFalseStr(d->req_AAAA), TrueFalseStr(d->isCLAT46));
 
     return mDNStrue;
 }

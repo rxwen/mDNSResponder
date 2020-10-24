@@ -84,6 +84,25 @@ LOCAL_SHARED_LIBRARIES := libmdnssd $(commonLibs)
 LOCAL_INIT_RC := mdnsd.rc
 include $(BUILD_EXECUTABLE)
 
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES :=  Clients/dns-sd.c \
+	Clients/ClientCommon.c
+LOCAL_MODULE := dnssd
+LOCAL_MODULE_TAGS := optional
+
+LOCAL_C_INCLUDES := $(daemonIncludes)
+
+LOCAL_CFLAGS := \
+  $(commonFlags) \
+  -DTARGET_OS_LINUX \
+  -DMDNS_VERSIONSTR_NODTS=1 \
+  -DHAVE_LINUX \
+  -DUSES_NETLINK \
+
+LOCAL_SHARED_LIBRARIES := \
+	libmdnssd
+
+include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := Clients/dns-sd.c

@@ -115,9 +115,11 @@ mDNSlocal void SetRecordRetry(mDNS *const m, AuthRecord *rr, mDNSu32 random)
 #pragma mark - Name Server List Management
 #endif
 
+#define TrueFalseStr(X) ((X) ? "true" : "false")
+
 mDNSexport DNSServer *mDNS_AddDNSServer(mDNS *const m, const domainname *d, const mDNSInterfaceID interface, const mDNSs32 serviceID, const mDNSAddr *addr,
-                                        const mDNSIPPort port, mDNSu32 scoped, mDNSu32 timeout, mDNSBool cellIntf, mDNSBool isExpensive, mDNSu16 resGroupID,
-                                        mDNSBool reqA, mDNSBool reqAAAA, mDNSBool reqDO)
+                                        const mDNSIPPort port, mDNSu32 scoped, mDNSu32 timeout, mDNSBool cellIntf, mDNSBool isExpensive, mDNSBool isCLAT46,
+                                        mDNSu16 resGroupID, mDNSBool reqA, mDNSBool reqAAAA, mDNSBool reqDO)
 {
     DNSServer **p = &m->DNSServers;
     DNSServer *tmp = mDNSNULL;
@@ -131,9 +133,9 @@ mDNSexport DNSServer *mDNS_AddDNSServer(mDNS *const m, const domainname *d, cons
     if (!d)
         d = (const domainname *)"";
 
-    LogInfo("mDNS_AddDNSServer(%d): Adding %#a for %##s, InterfaceID %p, serviceID %u, scoped %d, resGroupID %d req_A is %s req_AAAA is %s cell %s isExpensive %s req_DO is %s",
-        NumUnicastDNSServers, addr, d->c, interface, serviceID, scoped, resGroupID, reqA ? "True" : "False", reqAAAA ? "True" : "False",
-        cellIntf ? "True" : "False", isExpensive ? "True" : "False", reqDO ? "True" : "False");
+    LogInfo("mDNS_AddDNSServer(%d): Adding %#a for %##s, InterfaceID %p, serviceID %u, scoped %d, resGroupID %d req_A %s, req_AAAA %s, cell %s, expensive %s, CLAT46 %s, req_DO %s",
+        NumUnicastDNSServers, addr, d->c, interface, serviceID, scoped, resGroupID,
+        TrueFalseStr(reqA), TrueFalseStr(reqAAAA), TrueFalseStr(cellIntf), TrueFalseStr(isExpensive), TrueFalseStr(isCLAT46), TrueFalseStr(reqDO));
 
     mDNS_CheckLock(m);
 
@@ -199,6 +201,7 @@ mDNSexport DNSServer *mDNS_AddDNSServer(mDNS *const m, const domainname *d, cons
             (*p)->timeout     = timeout;
             (*p)->cellIntf    = cellIntf;
             (*p)->isExpensive = isExpensive;
+            (*p)->isCLAT46    = isCLAT46;
             (*p)->req_A       = reqA;
             (*p)->req_AAAA    = reqAAAA;
             (*p)->req_DO      = reqDO;
@@ -3922,14 +3925,7 @@ mDNSexport void uDNS_ReceiveMsg(mDNS *const m, DNSMessage *const msg, const mDNS
             if (msg->h.flags.b[0] & kDNSFlag0_TC && mDNSSameOpaque16(qptr->TargetQID, msg->h.id) && m->timenow - qptr->LastQTime < RESPONSE_WINDOW)
             {
                 if (!srcaddr) LogMsg("uDNS_ReceiveMsg: TCP DNS response had TC bit set: ignoring");
-                else
-                {
-                    // Don't reuse TCP connections. We might have failed over to a different DNS server
-                    // while the first TCP connection is in progress. We need a new TCP connection to the
-                    // new DNS server. So, always try to establish a new connection.
-                    if (qptr->tcp) { DisposeTCPConn(qptr->tcp); qptr->tcp = mDNSNULL; }
-                    qptr->tcp = MakeTCPConn(m, mDNSNULL, mDNSNULL, kTCPSocketFlags_Zero, srcaddr, srcport, mDNSNULL, qptr, mDNSNULL);
-                }
+                else          uDNS_RestartQuestionAsTCP(m, qptr, srcaddr, srcport);
             }
     }
 
@@ -5740,6 +5736,15 @@ mDNSexport domainname  *uDNS_GetNextSearchDomain(mDNSInterfaceID InterfaceID, mD
         p = p->next;
     }
     return mDNSNULL;
+}
+
+mDNSexport void uDNS_RestartQuestionAsTCP(mDNS *m, DNSQuestion *const q, const mDNSAddr *const srcaddr, const mDNSIPPort srcport)
+{
+    // Don't reuse TCP connections. We might have failed over to a different DNS server
+    // while the first TCP connection is in progress. We need a new TCP connection to the
+    // new DNS server. So, always try to establish a new connection.
+    if (q->tcp) { DisposeTCPConn(q->tcp); q->tcp = mDNSNULL; }
+    q->tcp = MakeTCPConn(m, mDNSNULL, mDNSNULL, kTCPSocketFlags_Zero, srcaddr, srcport, mDNSNULL, q, mDNSNULL);
 }
 
 mDNSlocal void FlushAddressCacheRecords(mDNS *const m)
