@@ -8,6 +8,7 @@ commonSources := \
 commonLibs := libcutils liblog
 
 commonFlags := \
+    -std=c99 \
     -O2 -g \
     -fno-strict-aliasing \
     -D_GNU_SOURCE \
@@ -32,25 +33,28 @@ daemonSources := mDNSCore/mDNS.c            \
                  mDNSCore/DNSDigest.c       \
                  mDNSCore/uDNS.c            \
                  mDNSCore/DNSCommon.c       \
-                 mDNSCore/anonymous.c       \
                  mDNSCore/CryptoAlg.c		\
                  mDNSShared/uds_daemon.c    \
                  mDNSShared/mDNSDebug.c     \
                  mDNSShared/dnssd_ipc.c     \
+                 mDNSShared/ClientRequests.c     \
                  mDNSShared/GenLinkedList.c \
                  mDNSShared/PlatformCommon.c \
                  mDNSPosix/PosixDaemon.c    \
                  mDNSPosix/mDNSPosix.c      \
+                 mDNSPosix/posix_utilities.c      \
                  mDNSPosix/mDNSUNP.c
 
 daemonIncludes := external/mdnsresponder/mDNSCore  \
                   external/mdnsresponder/mDNSShared \
+                  external/mdnsresponder/android \
                   external/mdnsresponder/mDNSPosix
 
 #########################
 
 include $(CLEAR_VARS)
-LOCAL_SRC_FILES :=  $(daemonSources)
+LOCAL_SRC_FILES :=  $(daemonSources) \
+	android/ifaddrs.c
 LOCAL_MODULE := mdnsd
 LOCAL_MODULE_TAGS := optional
 
@@ -63,8 +67,9 @@ LOCAL_CFLAGS := \
   -DHAVE_LINUX \
   -DUSES_NETLINK \
 
-LOCAL_STATIC_LIBRARIES := $(commonLibs) libc
-LOCAL_FORCE_STATIC_EXECUTABLE := true
+LOCAL_STATIC_LIBRARIES := $(commonLibs)
+LOCAL_SHARED_LIBRARIES += libnetutils
+#LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_INIT_RC := mdnsd.rc
 include $(BUILD_EXECUTABLE)
 
@@ -93,7 +98,6 @@ LOCAL_SRC_FILES := $(commonSources)
 LOCAL_MODULE := libmdnssd
 LOCAL_MODULE_TAGS := optional
 LOCAL_CFLAGS := $(commonFlags) -DTARGET_OS_LINUX -DHAVE_LINUX -DUSES_NETLINK
-LOCAL_SYSTEM_SHARED_LIBRARIES := libc
 LOCAL_SHARED_LIBRARIES := $(commonLibs)
 LOCAL_EXPORT_C_INCLUDE_DIRS := external/mdnsresponder/mDNSShared
 include $(BUILD_SHARED_LIBRARY)

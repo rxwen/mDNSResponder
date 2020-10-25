@@ -137,7 +137,6 @@ typedef enum
     getpid_request,
     release_request,
     connection_delegate_request,
-    sethost_request,
 
     cancel_request = 63
 } request_op_t;
@@ -152,8 +151,7 @@ typedef enum
     reg_record_reply_op,    // Up to here is in Tiger and B4W 1.0.3
     getproperty_reply_op,   // New in B4W 1.0.4
     port_mapping_reply_op,  // New in Leopard and B4W 2.0
-    addrinfo_reply_op,
-    sethost_reply,
+    addrinfo_reply_op
 } reply_op_t;
 
 #if defined(_WIN64)
