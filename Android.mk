@@ -8,7 +8,6 @@ commonSources := \
 commonLibs := libcutils liblog
 
 commonFlags := \
-    -std=c99 \
     -O2 -g \
     -fno-strict-aliasing \
     -D_GNU_SOURCE \
@@ -47,14 +46,13 @@ daemonSources := mDNSCore/mDNS.c            \
 
 daemonIncludes := external/mdnsresponder/mDNSCore  \
                   external/mdnsresponder/mDNSShared \
-                  external/mdnsresponder/android \
                   external/mdnsresponder/mDNSPosix
 
 #########################
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES :=  $(daemonSources) \
-	android/ifaddrs.c
+
 LOCAL_MODULE := mdnsd
 LOCAL_MODULE_TAGS := optional
 
@@ -67,8 +65,14 @@ LOCAL_CFLAGS := \
   -DHAVE_LINUX \
   -DUSES_NETLINK \
 
-LOCAL_STATIC_LIBRARIES := $(commonLibs)
+ifneq ($(TARGET_SIMULATOR),true)
+LOCAL_SRC_FILES +=  android/ifaddrs.c
+LOCAL_CFLAGS += -std=c99
+LOCAL_C_INCLUDES += external/mdnsresponder/android
 LOCAL_SHARED_LIBRARIES += libnetutils
+endif
+
+LOCAL_STATIC_LIBRARIES := $(commonLibs)
 #LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_INIT_RC := mdnsd.rc
 include $(BUILD_EXECUTABLE)
@@ -90,6 +94,15 @@ LOCAL_CFLAGS := \
 
 LOCAL_SHARED_LIBRARIES := \
 	libmdnssd
+
+ifneq ($(TARGET_SIMULATOR),true)
+LOCAL_SRC_FILES +=  android/ifaddrs.c
+LOCAL_CFLAGS += -std=c99
+LOCAL_C_INCLUDES += external/mdnsresponder/android
+LOCAL_SHARED_LIBRARIES += libnetutils
+else
+LOCAL_CFLAGS += -DBUILD_FOR_X86=1
+endif
 
 include $(BUILD_EXECUTABLE)
 
