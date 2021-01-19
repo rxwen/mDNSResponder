@@ -4125,6 +4125,8 @@ mDNSexport int udsserver_init(dnssd_sock_t skts[], mDNSu32 count)
             laddr.sin_family = AF_INET;
             laddr.sin_port = htons(MDNS_TCP_SERVERPORT);
             laddr.sin_addr.s_addr = inet_addr(MDNS_TCP_SERVERADDR);
+            int yes = 1;
+            setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
             ret = bind(listenfd, (struct sockaddr *) &laddr, sizeof(laddr));
             if (ret < 0)
             {
